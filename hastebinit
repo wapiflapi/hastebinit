@@ -47,6 +47,10 @@ useful for keybindings.
         args.name = args.file.name
     _, ext = os.path.splitext(args.name)
 
+    # This is hack because hastebin doesn't handle some extensions well.
+    if ext == ".c":
+        ext = ".cpp"
+
     if args.xclip_input:
         data = subprocess.check_output(["xclip", "-out"])
     else:
