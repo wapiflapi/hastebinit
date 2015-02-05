@@ -1,12 +1,18 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import requests
 
 from urllib.parse import urljoin
-import requests
 
 def hastebinit(data, ext='', raw=False, url='http://hastebin.com/'):
 
     r = requests.post(urljoin(url, 'documents'), data=data)
-    key = r.json()['key']
+    response = r.json()
+
+    key = response.get('key')
+    if key is None:
+        raise RuntimeError(response.get('message', "Unable to add document."))
 
     if raw: url = urljoin(url, 'raw/')
     return urljoin(url, key) + ext
@@ -39,8 +45,8 @@ useful for keybindings.
                         help="override the filename/extension")
     parser.add_argument('-u', '--url', default='http://hastebin.com/',
                         help="url of the hastebin server to use")
-    parser.add_argument('file', type=argparse.FileType('r'),
-                        nargs='?', default=sys.stdin)
+    parser.add_argument('file', type=argparse.FileType('rb'),
+                        nargs='?', default=sys.stdin.buffer)
     args = parser.parse_args()
 
     if args.name is None:
@@ -64,7 +70,10 @@ useful for keybindings.
         p = subprocess.Popen(['xclip', '-in'], stdin=subprocess.PIPE)
         p.communicate(input=b"")
 
-    url = hastebinit(data, ext, raw=args.raw, url=args.url)
+    try:
+        url = hastebinit(data, ext, raw=args.raw, url=args.url)
+    except RuntimeError as e:
+        sys.exit(e)
 
     if args.xclip_output:
         p = subprocess.Popen(['xclip', '-in'], stdin=subprocess.PIPE)
