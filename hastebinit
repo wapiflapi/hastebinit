@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import io
 import requests
 
 from urllib.parse import urljoin
@@ -46,21 +47,22 @@ useful for keybindings.
     parser.add_argument('-u', '--url', default='http://hastebin.com/',
                         help="url of the hastebin server to use")
     parser.add_argument('file', type=argparse.FileType('rb'),
-                        nargs='?', default=sys.stdin.buffer)
+                        nargs='*', default=[])
     args = parser.parse_args()
 
     if args.name is None:
-        args.name = args.file.name
+        args.name = args.file[0].name if args.file else ""
     _, ext = os.path.splitext(args.name)
 
     # This is hack because hastebin doesn't handle some extensions well.
     if ext == ".c":
-        ext = ".cpp"
+        ext = ".cpp#.c"
 
     if args.xclip_input:
-        data = subprocess.check_output(["xclip", "-out"])
-    else:
-        data = args.file.read()
+        xclip = io.StringIO(subprocess.check_output(["xclip", "-out"]))
+        args.file.append(xclip)
+    elif not args.file:
+        args.file = [sys.stdin.buffer]
 
     if args.xclip_output:
         # Set empty selection before doing remote requests.
@@ -70,14 +72,21 @@ useful for keybindings.
         p = subprocess.Popen(['xclip', '-in'], stdin=subprocess.PIPE)
         p.communicate(input=b"")
 
-    try:
-        url = hastebinit(data, ext, raw=args.raw, url=args.url)
-    except RuntimeError as e:
-        sys.exit(e)
+    urls = []
+
+    for f in args.file:
+        try:
+            urls.append(hastebinit(f.read(), ext, raw=args.raw, url=args.url))
+        except RuntimeError as e:
+            print(e)
+
+    if not urls:
+        exit(1)
 
     if args.xclip_output:
         p = subprocess.Popen(['xclip', '-in'], stdin=subprocess.PIPE)
-        p.communicate(input=bytes(url, 'utf8'))
+        p.communicate(input=bytes(", ".join(urls), 'utf8'))
 
-    print(url)
+    for url in urls:
+        print(url)
 
