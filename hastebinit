@@ -59,7 +59,7 @@ useful for keybindings.
         ext = ".cpp#.c"
 
     if args.xclip_input:
-        xclip = io.StringIO(subprocess.check_output(["xclip", "-out"]))
+        xclip = io.BytesIO(subprocess.check_output(["xclip", "-out"]))
         args.file.append(xclip)
     elif not args.file:
         args.file = [sys.stdin.buffer]
